@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EmployeeController } from './employee.controller';
 import { EmployeeService } from './employee.service';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('EmployeeController', () => {
   let controller: EmployeeController;
@@ -76,6 +76,86 @@ describe('EmployeeController', () => {
       await expect(controller.create(createEmployeeDto))
         .rejects
         .toThrow(ConflictException);
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return an array of employees', async () => {
+      const mockEmployees = [mockEmployee];
+      mockEmployeeService.findAll.mockResolvedValue(mockEmployees);
+
+      const result = await controller.findAll();
+
+      expect(result).toEqual(mockEmployees);
+      expect(mockEmployeeService.findAll).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a single employee', async () => {
+      const id = '1';
+      mockEmployeeService.findOne.mockResolvedValue(mockEmployee);
+
+      const result = await controller.findOne(id);
+
+      expect(result).toEqual(mockEmployee);
+      expect(mockEmployeeService.findOne).toHaveBeenCalledWith(id);
+    });
+
+    it('should throw NotFoundException when employee is not found', async () => {
+      const id = 'non-existent-id';
+      mockEmployeeService.findOne.mockRejectedValue(new NotFoundException('Employee not found'));
+
+      await expect(controller.findOne(id)).rejects.toThrow(NotFoundException);
+      expect(mockEmployeeService.findOne).toHaveBeenCalledWith(id);
+    });
+  });
+
+  describe('update', () => {
+    const updateDto = {
+      firstName: 'Updated',
+      lastName: 'Employee',
+      department: 'IT',
+      position: 'Senior Developer'
+    };
+
+    it('should update an employee successfully', async () => {
+      const id = '1';
+      const updatedEmployee = { ...mockEmployee, ...updateDto };
+      mockEmployeeService.update.mockResolvedValue(updatedEmployee);
+
+      const result = await controller.update(id, updateDto);
+
+      expect(result).toEqual(updatedEmployee);
+      expect(mockEmployeeService.update).toHaveBeenCalledWith(id, updateDto);
+    });
+
+    it('should throw NotFoundException when updating non-existent employee', async () => {
+      const id = 'non-existent-id';
+      mockEmployeeService.update.mockRejectedValue(new NotFoundException('Employee not found'));
+
+      await expect(controller.update(id, updateDto)).rejects.toThrow(NotFoundException);
+      expect(mockEmployeeService.update).toHaveBeenCalledWith(id, updateDto);
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove an employee successfully', async () => {
+      const id = '1';
+      mockEmployeeService.remove.mockResolvedValue(mockEmployee);
+
+      const result = await controller.remove(id);
+
+      expect(result).toEqual(mockEmployee);
+      expect(mockEmployeeService.remove).toHaveBeenCalledWith(id);
+    });
+
+    it('should throw NotFoundException when removing non-existent employee', async () => {
+      const id = 'non-existent-id';
+      mockEmployeeService.remove.mockRejectedValue(new NotFoundException('Employee not found'));
+
+      await expect(controller.remove(id)).rejects.toThrow(NotFoundException);
+      expect(mockEmployeeService.remove).toHaveBeenCalledWith(id);
     });
   });
 }); 
