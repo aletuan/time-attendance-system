@@ -12,6 +12,7 @@ describe('AuthService', () => {
 
   const mockEmployeeService = {
     findByEmail: jest.fn(),
+    create: jest.fn(),
   };
 
   const mockJwtService = {
@@ -36,6 +37,9 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     employeeService = module.get<EmployeeService>(EmployeeService);
     jwtService = module.get<JwtService>(JwtService);
+
+    // Clear all mocks before each test
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -135,6 +139,48 @@ describe('AuthService', () => {
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
       expect(mockEmployeeService.findByEmail).toHaveBeenCalledWith(loginDto.email);
+    });
+  });
+
+  describe('register', () => {
+    const createEmployeeDto = {
+      employeeId: 'EMP001',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'Password123!',
+      department: 'IT',
+      position: 'Developer'
+    };
+
+    it('should register a new employee and return access token', async () => {
+      const createdEmployee = {
+        id: '123',
+        ...createEmployeeDto,
+        password: 'hashedPassword'
+      };
+      const mockToken = 'jwt-token';
+
+      mockEmployeeService.create.mockResolvedValue(createdEmployee);
+      mockJwtService.sign.mockReturnValue(mockToken);
+
+      const result = await service.register(createEmployeeDto);
+
+      expect(result).toEqual({ access_token: mockToken });
+      expect(mockEmployeeService.create).toHaveBeenCalledWith(createEmployeeDto);
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        email: createdEmployee.email,
+        sub: createdEmployee.id,
+      });
+    });
+
+    it('should pass through any errors from employee creation', async () => {
+      const error = new Error('Database error');
+      mockEmployeeService.create.mockRejectedValue(error);
+
+      await expect(service.register(createEmployeeDto)).rejects.toThrow(error);
+      expect(mockEmployeeService.create).toHaveBeenCalledWith(createEmployeeDto);
+      expect(mockJwtService.sign).not.toHaveBeenCalled();
     });
   });
 }); 
