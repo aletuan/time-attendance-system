@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceService } from './attendance.service';
 import { Attendance } from './entities/attendance.entity';
+import { CreateAttendanceDto } from './dto/create-attendance.dto';
+import { HttpException } from '@nestjs/common';
 
 describe('AttendanceController', () => {
   let controller: AttendanceController;
@@ -41,7 +43,10 @@ describe('AttendanceController', () => {
           provide: AttendanceService,
           useValue: {
             findOne: jest.fn(),
-            findAll: jest.fn()
+            findAll: jest.fn(),
+            checkIn: jest.fn(),
+            checkOut: jest.fn(),
+            findByEmployeeId: jest.fn(),
           },
         },
       ],
@@ -79,5 +84,46 @@ describe('AttendanceController', () => {
     expect(result).toEqual(mockAttendances);
     expect(service.findAll).toHaveBeenCalled();
     expect(result.length).toBe(2);
+  });
+
+  describe('checkIn', () => {
+    it('should create a new check-in record successfully', async () => {
+      // Create a valid CreateAttendanceDto
+      const createAttendanceDto: CreateAttendanceDto = {
+        employeeId: '1'
+      };
+
+      // Mock the service response
+      jest.spyOn(service, 'checkIn').mockResolvedValue(mockAttendance);
+
+      // Call the controller method
+      const result = await controller.checkIn(createAttendanceDto);
+
+      // Verify the result has the correct structure
+      expect(result).toEqual({
+        status: 'success',
+        data: mockAttendance
+      });
+
+      // Verify the service was called with the correct parameters
+      expect(service.checkIn).toHaveBeenCalledWith(createAttendanceDto);
+    });
+
+    it('should handle errors when check-in fails', async () => {
+      // Create a valid CreateAttendanceDto
+      const createAttendanceDto: CreateAttendanceDto = {
+        employeeId: '1'
+      };
+
+      // Mock the service to throw an error
+      const errorMessage = 'Employee has already checked in today';
+      jest.spyOn(service, 'checkIn').mockRejectedValue(new Error(errorMessage));
+
+      // Expect the controller to throw an HttpException
+      await expect(controller.checkIn(createAttendanceDto)).rejects.toThrow(HttpException);
+
+      // Verify the service was called with the correct parameters
+      expect(service.checkIn).toHaveBeenCalledWith(createAttendanceDto);
+    });
   });
 });
