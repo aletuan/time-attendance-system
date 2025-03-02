@@ -101,6 +101,24 @@ describe('EmployeeService', () => {
     });
   });
 
+  describe('findOne', () => {
+    it('should return an employee when found', async () => {
+      mockRepository.findOne.mockResolvedValue(mockEmployee);
+
+      const result = await service.findOne('1');
+      
+      expect(result).toEqual(mockEmployee);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
+    });
+
+    it('should throw NotFoundException when employee is not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne('999')).rejects.toThrow(NotFoundException);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({ where: { id: '999' } });
+    });
+  });
+
   describe('update', () => {
     it('should update an employee', async () => {
       const updateDto = { firstName: 'Jane', department: 'HR' };
